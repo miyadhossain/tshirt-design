@@ -1,29 +1,41 @@
 "use client";
 
+import { ApiResponse } from "@/app/page";
 import { formatDateTime } from "@/utils/formatDateTime";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Pagination from "./Pagination";
+import RowsPerPage from "./RowsPerPage";
 
-const CustomTable = ({ result }) => {
+type CustomTableProps = {
+  result: ApiResponse; // Use the ApiResponse type for the result prop
+};
+
+const CustomTable: React.FC<CustomTableProps> = ({ result }) => {
   const router = useRouter();
   const pathname = usePathname();
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState(null); // Start with no sorting
-  const [sortDirection, setSortDirection] = useState("asc");
-  const [selectedRows, setSelectedRows] = useState([]);
+  const [sortBy, setSortBy] = useState<string | null>(null); // Start with no sorting
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const searchParams = useSearchParams();
 
-  const handlePageChange = (page) => {
+  const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("page", page);
+    params.set("page", page.toString());
     router.push(`${pathname}?${params}`);
     setCurrentPage(page);
   };
 
+  const handleSelectPerPage = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("paginate", e.target.value);
+    router.push(`${pathname}?${params}`);
+  };
+
   // Handle sorting
-  const handleSort = (column) => {
+  const handleSort = (column: string) => {
     if (sortBy === column) {
       // Toggle sort direction if the same column is clicked
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -35,13 +47,13 @@ const CustomTable = ({ result }) => {
   };
 
   // Helper function to compare dates
-  const compareDates = (a, b) => {
-    return new Date(a) - new Date(b);
+  const compareDates = (a: string, b: string) => {
+    return new Date(a).getTime() - new Date(b).getTime();
   };
 
   // Filter and sort data
   const filteredData = result?.data.sort((a, b) => {
-    if (!sortBy) return 0; // No sorting applied
+    if (!sortBy) return 0; // No sorting applied if sortBy is null
 
     let compare = 0;
 
@@ -51,16 +63,33 @@ const CustomTable = ({ result }) => {
       sortBy === "created_at" ||
       sortBy === "updated_at"
     ) {
-      compare = compareDates(a[sortBy], b[sortBy]);
+      // Ensure the value is a string that can be parsed as a date
+      const dateA = a[sortBy as keyof typeof a] as string | null;
+      const dateB = b[sortBy as keyof typeof b] as string | null;
+
+      if (dateA && dateB) {
+        compare = compareDates(dateA, dateB);
+      } else {
+        compare = 0; // Treat null values as equal
+      }
     } else {
-      // Default string comparison
-      compare = a[sortBy].localeCompare(b[sortBy]);
+      // Default string comparison (make sure the value is a string)
+      const valA = a[sortBy as keyof typeof a];
+      const valB = b[sortBy as keyof typeof b];
+
+      if (typeof valA === "string" && typeof valB === "string") {
+        compare = valA.localeCompare(valB);
+      } else if (typeof valA === "number" && typeof valB === "number") {
+        compare = valA - valB; // Numeric comparison
+      } else {
+        compare = 0; // If values are not comparable, treat them as equal
+      }
     }
 
     return sortDirection === "asc" ? compare : -compare;
   });
 
-  const handleSelectRow = (id) => {
+  const handleSelectRow = (id: number) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
     } else {
@@ -97,12 +126,19 @@ const CustomTable = ({ result }) => {
     };
   }, [search, router, pathname]);
 
-  const handleSearchChange = (e) => {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value); // Update the state when the input changes
+  };
+
+  const paginateRowsData = {
+    current_page: result?.current_page,
+    per_page: result?.per_page,
+    total: result?.total,
   };
 
   return (
     <div className="p-6">
+      <h1 className="text-xl font-bold mb-4">User Information</h1>
       {/* Search Bar */}
       <div className="flex items-center justify-between mb-4">
         <input
@@ -244,7 +280,7 @@ const CustomTable = ({ result }) => {
                 <td className="px-4 py-3">{row.name}</td>
                 <td className="px-4 py-3">{row.email}</td>
                 <td className="px-4 py-3">
-                  {formatDateTime(row.email_verified_at)}
+                  {formatDateTime(row.email_verified_at || "")}
                 </td>
                 <td className="px-4 py-3">{formatDateTime(row.created_at)}</td>
                 <td className="px-4 py-3">{formatDateTime(row.updated_at)}</td>
@@ -253,7 +289,12 @@ const CustomTable = ({ result }) => {
           </tbody>
         </table>
       </div>
-      <div className="flex justify-end items-center my-4">
+      <div className="flex space-x-6 justify-end items-center my-4">
+        <RowsPerPage
+          paginateRowsData={paginateRowsData}
+          perPage={currentPage}
+          handleSelectPerPage={handleSelectPerPage}
+        />
         <Pagination
           currentPage={currentPage}
           totalPages={result?.last_page}

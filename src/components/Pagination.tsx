@@ -1,14 +1,32 @@
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
-  const generatePages = () => {
-    const pages = [];
-    for (let i = 1; i <= totalPages; i++) {
-      pages.push(i);
-    }
-    return pages;
-  };
+import React from "react";
 
+// Define the type for the props
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+const Pagination: React.FC<PaginationProps> = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+}) => {
   return (
     <div className="flex items-center justify-center space-x-2">
+      {/* First Page Button */}
+      <button
+        onClick={() => onPageChange(1)}
+        disabled={currentPage === 1}
+        className={`w-8 h-8 flex items-center justify-center rounded border ${
+          currentPage === 1
+            ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+            : "text-gray-600 bg-white hover:bg-gray-200"
+        }`}
+      >
+        &#171; {/* Double left arrow for "First" */}
+      </button>
+
       {/* Previous Button */}
       <button
         onClick={() => onPageChange(currentPage - 1)}
@@ -19,31 +37,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
             : "text-gray-600 bg-white hover:bg-gray-200"
         }`}
       >
-        &lt;
+        &lt; {/* Single left arrow for "Previous" */}
       </button>
-
-      {/* Page Numbers */}
-      {generatePages().map((page) =>
-        page === 1 ||
-        page === totalPages ||
-        Math.abs(currentPage - page) <= 1 ? (
-          <button
-            key={page}
-            onClick={() => onPageChange(page)}
-            className={`w-8 h-8 flex items-center justify-center ${
-              page === currentPage
-                ? "bg-black text-white rounded-md"
-                : "text-black hover:bg-gray-200 rounded-md"
-            }`}
-          >
-            {page}
-          </button>
-        ) : page === currentPage + 2 || page === currentPage - 2 ? (
-          <span key={page} className="w-8 h-8 flex items-center justify-center">
-            ...
-          </span>
-        ) : null
-      )}
 
       {/* Next Button */}
       <button
@@ -55,7 +50,20 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
             : "text-gray-600 bg-white hover:bg-gray-200"
         }`}
       >
-        &gt;
+        &gt; {/* Single right arrow for "Next" */}
+      </button>
+
+      {/* Last Page Button */}
+      <button
+        onClick={() => onPageChange(totalPages)}
+        disabled={currentPage === totalPages}
+        className={`w-8 h-8 flex items-center justify-center rounded border ${
+          currentPage === totalPages
+            ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+            : "text-gray-600 bg-white hover:bg-gray-200"
+        }`}
+      >
+        &#187; {/* Double right arrow for "Last" */}
       </button>
     </div>
   );
